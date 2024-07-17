@@ -196,13 +196,85 @@ export const EditCustomerProfile  = async  (req: Request, res: Response, next: N
 
 export const AddToCart = async (req: Request, res: Response, next: NextFunction) => {
 
+    const customer = req.user;
+
+    if(customer){
+        // console.log('customer exists')
+        const profile = await Customer.findById(customer._id).populate('cart.food');
+        let cartItems = Array();
+        const {_id, unit} = <OrderInputs>req.body;
+        const food = await Food.findById(_id);
+        if(food){
+            // console.log('food exists')
+            if(profile != null){
+
+                // console.log('profile exists')
+                cartItems = profile.cart;
+                if(cartItems.length > 0){
+
+                    let existFoodItem = cartItems.filter((item) => item.food._id.toString() === _id);
+                    if(existFoodItem.length> 0){
+
+                        const index = cartItems.indexOf(existFoodItem[0]);
+                        if(unit > 0){
+
+                            cartItems[index] = { food, unit};
+
+                        }else{
+
+                            cartItems.splice(index, 1)
+                        }
+                    }else{
+                        
+                        cartItems.push({ food, unit});
+                    }
+                }else{
+                    
+                    cartItems.push({ food, unit })
+                }
+                if(cartItems){
+                    
+                    profile.cart = cartItems as any;
+                    const cartresult = await profile.save();
+                    return res.status(200).json(cartresult.cart);
+
+                }
+            }
+        }
+    }
+
+    return res.status(400).json({message: 'Unable to create cart!'});
+    
+
 }
 
 export const GetCart = async (req: Request, res: Response, next: NextFunction) => {
 
+    const customer = req.user;
+    if(customer){
+        const profile = await Customer.findById(customer._id).populate('cart.food');
+        if(profile){
+            return res.status(200).json(profile.cart);
+        }
+    }
+
+    return res.status(400).json({message: 'cart is empty!'})
+
 }
 
 export const DeleteCart = async (req: Request, res: Response, next: NextFunction) => {
+
+    const customer = req.user;
+    if(customer){
+        const profile = await Customer.findById(customer._id).populate('cart.food');
+        if(profile != null){
+            profile.cart = [] as any;
+            const cartResult = await profile.save();
+            return res.status(200).json(cartResult);
+        }
+    }
+
+    return res.status(400).json({message: 'cart is already empty!'})
 
 }
 
@@ -224,6 +296,7 @@ export const CreateOrder = async (req: Request, res: Response, next: NextFunctio
             let cartItems = Array();
 
             let netAmount = 0.0;
+            let vendorId;
 
             //calculate order amount
             const foods = await Food.find().where('_id').in(cart.map(item => item._id)).exec();
@@ -232,6 +305,7 @@ export const CreateOrder = async (req: Request, res: Response, next: NextFunctio
                 
                 cart.map(({_id, unit}) => {
                     if (food._id == _id){
+                        vendorId = food.vendorId
                         netAmount += (food.price * unit);
                         cartItems.push({food, unit})
                     }
@@ -242,14 +316,19 @@ export const CreateOrder = async (req: Request, res: Response, next: NextFunctio
             if(cartItems){
                 const currentOrder = await Order.create({
                     orderID: OrderId,
+                    vendorId: vendorId,
                     items: cartItems,
                     totalAmount: netAmount,
                     orderDate: new Date(),
                     paidThrough: 'COD',
                     paymentResponse: '',
-                    orderStatus: 'Waiting'
+                    orderStatus: 'Waiting',
+                    remarks: '',
+                    deliveryId: '',
+                    appliedOffer: false,
+                    readyTime: 45,
                 })
-            
+                profile.cart = [] as any;
                 //Finally update order to user account
                 if(currentOrder){
                     profile.orders.push(currentOrder);
