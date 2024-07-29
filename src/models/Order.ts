@@ -5,14 +5,11 @@ export interface OrderDoc extends Document {
     vendorId: string,
     items: [{ food: mongoose.Types.ObjectId, unit: number }],
     totalAmount: number,
-    orderDate: Date,
-    paidThrough: string,
-    paymentResponse: string,
+    paidAmount: number,
+    orderDate: Date,  
     orderStatus: string,
     remarks: string,
     deliveryId: string,
-    appliedOffers: boolean,
-    offerId: string,
     readyTime: number, // max 60 min
 }
 
@@ -24,14 +21,11 @@ const OrderSchema = new Schema({
         unit: { type: Number, require: true }
     }],
     totalAmount: { type: Number, require: true },
+    paidAmount: { type: Number, require: true },
     orderDate: { type: Date, default: Date.now, require: true }, // Change type to Date
-    paidThrough: { type: String },
-    paymentResponse: { type: String },
     orderStatus: { type: String },
     remarks: { type: String },
     deliveryId: { type: String },
-    appliedOffers: { type: Boolean },
-    offerId: { type: String },
     readyTime: { type: Number },
 }, {
     toJSON: {

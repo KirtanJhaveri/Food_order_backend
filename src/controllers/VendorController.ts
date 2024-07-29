@@ -102,19 +102,26 @@ export const UpdateVendorService = async (req: Request, res: Response, next: Nex
     // const {foodTypes, name, address, phone} = <EditVendorInputs>req.body;
 
     const user = req.user;
+    const { lat, lng} = req.body;
 
     if (user){
         const existingVendor = await FindVendor(user._id)
+        
 
         if (existingVendor !== null){
             existingVendor.serviceAvailable = !existingVendor.serviceAvailable;
+
+            if(lat && lng){
+                existingVendor.lat = lat;
+                existingVendor.lng = lng;
+            }
+
             const savedResult = await existingVendor.save()
+
             return res.json(savedResult);
-
-
-            // return res.json(existingVendor)
+            
         }
-
+        return res.json(existingVendor)
     }
 
     return res.json({"message": "vendor information not found"})
